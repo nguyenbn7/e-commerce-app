@@ -27,7 +27,7 @@ def custom_exception_handler(exc, context):
 
         if isinstance(exc, ValidationError):
             custom_response.data["detail"] = "Validation Error"
-            custom_response.data["errors"] = response.data
+            custom_response.data["fields"] = response.data
 
             return custom_response
 

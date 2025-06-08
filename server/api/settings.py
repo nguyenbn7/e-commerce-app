@@ -129,6 +129,7 @@ REST_FRAMEWORK = {
 
 LOG_REQUESTS = True
 REQUEST_ID_RESPONSE_HEADER = "X-Request-Id"
+NO_REQUEST_ID = ""
 
 # TODO: extend current log
 LOGGING = {
@@ -136,9 +137,10 @@ LOGGING = {
     "disable_existing_loggers": False,
     "filters": {"request_id": {"()": "log_request_id.filters.RequestIDFilter"}},
     "formatters": {
+        # "TODO": {"()": "django.utils.log.ServerFormatter"},
         "standard": {
-            "format": "[%(asctime)s] [%(request_id)s] %(name)s: %(message)s",
-            "datefmt": "%d/%m/%Y %H:%M:%S",
+            "format": "%(asctime)s | %(request_id)-32s | %(levelname)-8s | [%(name)s]: %(message)s",
+            "datefmt": "%d/%b/%Y %H:%M:%S",
         },
     },
     "handlers": {
@@ -151,6 +153,11 @@ LOGGING = {
     },
     "loggers": {
         "django": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "": {
             "handlers": ["console"],
             "level": "INFO",
             "propagate": False,

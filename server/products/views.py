@@ -16,6 +16,7 @@ class ProductList(APIView):
     def get(self, request: Request, format=None):
         brand_query_str = request.query_params.get("brand", "")
         type_query_str = request.query_params.get("type", "")
+        sort_query_str = request.query_params.get("sort", "")
 
         query = Product.objects
 
@@ -25,7 +26,15 @@ class ProductList(APIView):
         if type_query_str:
             query = query.filter(type__exact=type_query_str)
 
-        products = query.order_by("id").all()
+        match sort_query_str:
+            case "price":
+                query = query.order_by("price")
+            case "-price":
+                query = query.order_by("-price")
+            case _:
+                query = query.order_by("name")
+
+        products = query.all()
 
         response_serializer = ProductViewSerializer(products, many=True)
 

@@ -12,6 +12,10 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 
+import structlog
+from django.dispatch import receiver
+from django_structlog import signals
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -26,12 +30,12 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
+    "django_structlog",
     "rest_framework",
     "products",
 ]
 
 MIDDLEWARE = [
-    "log_request_id.middleware.RequestIDMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -40,6 +44,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django_structlog.middlewares.RequestMiddleware",
 ]
 
 ROOT_URLCONF = "api.urls"
@@ -127,40 +132,91 @@ REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "api.errors.custom_exception_handler",
 }
 
-LOG_REQUESTS = True
-REQUEST_ID_RESPONSE_HEADER = "X-Request-Id"
-NO_REQUEST_ID = ""
-
-# TODO: extend current log
 LOGGING = {
     "version": 1,
-    "disable_existing_loggers": False,
-    "filters": {"request_id": {"()": "log_request_id.filters.RequestIDFilter"}},
+    "disable_existing_loggers": True,
     "formatters": {
-        # "TODO": {"()": "django.utils.log.ServerFormatter"},
-        "standard": {
-            "format": "%(asctime)s | %(request_id)-32s | %(levelname)-8s | [%(name)s]: %(message)s",
-            "datefmt": "%d/%b/%Y %H:%M:%S",
+        "json_formatter": {
+            "()": structlog.stdlib.ProcessorFormatter,
+            "processor": structlog.processors.JSONRenderer(),
+        },
+        "plain": {
+            "()": structlog.stdlib.ProcessorFormatter,
+            "processors": [
+                structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+                structlog.dev.ConsoleRenderer(colors=False),
+            ],
+        },
+        "colored": {
+            "()": structlog.stdlib.ProcessorFormatter,
+            "processors": [
+                structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+                structlog.dev.ConsoleRenderer(colors=True),
+            ],
+        },
+        "key_value": {
+            "()": structlog.stdlib.ProcessorFormatter,
+            "processor": structlog.processors.KeyValueRenderer(
+                key_order=["timestamp", "level", "event", "logger"]
+            ),
+        },
+    },
+    "filters": {
+        "exclude_request_started": {
+            "()": "api.logging.filters.ExcludeEventsFilter",
         },
     },
     "handlers": {
         "console": {
-            "level": "DEBUG",
             "class": "logging.StreamHandler",
-            "filters": ["request_id"],
-            "formatter": "standard",
+            "formatter": "colored",
+            "filters": ["exclude_request_started"],
         },
+        # "json_file": {
+        #     "class": "logging.handlers.WatchedFileHandler",
+        #     "filename": "logs/json.log",
+        #     "formatter": "json_formatter",
+        # },
+        # "flat_line_file": {
+        #     "class": "logging.handlers.WatchedFileHandler",
+        #     "filename": "logs/flat_line.log",
+        #     "formatter": "key_value",
+        # },
     },
     "loggers": {
-        "django": {
-            "handlers": ["console"],
-            "level": "INFO",
-            "propagate": False,
-        },
         "": {
             "handlers": ["console"],
             "level": "INFO",
             "propagate": False,
         },
+        "django.server": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
     },
 }
+
+structlog.configure(
+    processors=[
+        structlog.contextvars.merge_contextvars,
+        structlog.stdlib.filter_by_level,
+        structlog.processors.TimeStamper(fmt="%d/%b/%Y %H:%M:%S"),
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.PositionalArgumentsFormatter(),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+        structlog.processors.UnicodeDecoder(),
+        structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+    ],
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    cache_logger_on_first_use=True,
+)
+
+
+@receiver(signals.update_failure_response)
+@receiver(signals.bind_extra_request_finished_metadata)
+def add_request_id_to_error_response(response, logger, **kwargs):
+    context = structlog.contextvars.get_merged_contextvars(logger)
+    response["X-Request-ID"] = context["request_id"]

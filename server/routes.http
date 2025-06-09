@@ -17,7 +17,7 @@ Content-Type: application/json
 }
 
 ###
-GET {{baseAPIUrl}}/products/10 HTTP/1.1
+GET {{baseAPIUrl}}/products/1000 HTTP/1.1
 
 ###
 PUT {{baseAPIUrl}}/products/110 HTTP/1.1

@@ -9,11 +9,7 @@ class ProductViewSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        exclude = (
-            "picture_url",
-            "quantity_in_stock",
-            "created_at"
-        )
+        exclude = ("picture_url", "quantity_in_stock", "created_at")
 
 
 class ProductSerializer(serializers.Serializer):

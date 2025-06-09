@@ -61,3 +61,17 @@ class ProductDetail(APIView):
         response_serializer = ProductViewSerializer(product)
 
         return Response({"product": response_serializer.data})
+
+
+class ProductBrandList(APIView):
+    def get(self, request: HttpRequest, format=None):
+        brands = Product.objects.values_list("brand", flat=True).distinct()
+
+        return Response({"brands": brands})
+
+
+class ProductTypeList(APIView):
+    def get(self, request: HttpRequest, format=None):
+        types = Product.objects.values_list("type", flat=True).distinct()
+
+        return Response({"types": types})

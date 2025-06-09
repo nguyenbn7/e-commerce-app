@@ -3,6 +3,12 @@
 ###
 GET {{baseAPIUrl}}/products/ HTTP/1.1
 
+
+###
+GET {{baseAPIUrl}}/products/brands HTTP/1.1
+
+###
+GET {{baseAPIUrl}}/products/types HTTP/1.1
 ###
 POST {{baseAPIUrl}}/products/ HTTP/1.1
 Content-Type: application/json

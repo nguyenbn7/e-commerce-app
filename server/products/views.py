@@ -1,6 +1,6 @@
-from django.http import HttpRequest
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.request import Request
 from rest_framework.exceptions import NotFound
 
 from products.models import Product
@@ -13,14 +13,25 @@ from products.serializers import (
 
 
 class ProductList(APIView):
-    def get(self, request: HttpRequest, format=None):
-        products = Product.objects.all()
+    def get(self, request: Request, format=None):
+        brand_query_str = request.query_params.get("brand", "")
+        type_query_str = request.query_params.get("type", "")
+
+        query = Product.objects
+
+        if brand_query_str:
+            query = query.filter(brand__exact=brand_query_str)
+
+        if type_query_str:
+            query = query.filter(type__exact=type_query_str)
+
+        products = query.order_by("id").all()
 
         response_serializer = ProductViewSerializer(products, many=True)
 
         return Response({"products": response_serializer.data})
 
-    def post(self, request: HttpRequest, format=None):
+    def post(self, request: Request, format=None):
         serializer = ProductSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -35,7 +46,7 @@ class ProductList(APIView):
 
 
 class ProductDetail(APIView):
-    def get(self, request: HttpRequest, id, format=None):
+    def get(self, request: Request, id, format=None):
         product = Product.objects.filter(pk=id).first()
 
         if not product:
@@ -45,7 +56,7 @@ class ProductDetail(APIView):
 
         return Response({"product": response_serializer.data})
 
-    def put(self, request: HttpRequest, id, format=None):
+    def put(self, request: Request, id, format=None):
         product = Product.objects.filter(pk=id).first()
 
         if not product:
@@ -64,14 +75,14 @@ class ProductDetail(APIView):
 
 
 class ProductBrandList(APIView):
-    def get(self, request: HttpRequest, format=None):
+    def get(self, request: Request, format=None):
         brands = Product.objects.values_list("brand", flat=True).distinct()
 
         return Response({"brands": brands})
 
 
 class ProductTypeList(APIView):
-    def get(self, request: HttpRequest, format=None):
+    def get(self, request: Request, format=None):
         types = Product.objects.values_list("type", flat=True).distinct()
 
         return Response({"types": types})

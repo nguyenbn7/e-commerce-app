@@ -1,7 +1,7 @@
 @baseAPIUrl=http://localhost:8000/api
 
 ###
-GET {{baseAPIUrl}}/products/ HTTP/1.1
+GET {{baseAPIUrl}}/products/?type=Boots HTTP/1.1
 
 
 ###

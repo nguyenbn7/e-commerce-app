@@ -1,13 +1,14 @@
 @baseAPIUrl=http://localhost:8000/api
 
 ###
-GET {{baseAPIUrl}}/products/?type=Boots&sort=-price HTTP/1.1
+GET {{baseAPIUrl}}/products/?type=Boots&sort=-price&pageSize=3 HTTP/1.1
 
 ###
 GET {{baseAPIUrl}}/products/brands HTTP/1.1
 
 ###
 GET {{baseAPIUrl}}/products/types HTTP/1.1
+
 ###
 POST {{baseAPIUrl}}/products/ HTTP/1.1
 Content-Type: application/json
@@ -22,10 +23,10 @@ Content-Type: application/json
 }
 
 ###
-GET {{baseAPIUrl}}/products/1000 HTTP/1.1
+GET {{baseAPIUrl}}/products/19 HTTP/1.1
 
 ###
-PUT {{baseAPIUrl}}/products/110 HTTP/1.1
+PUT {{baseAPIUrl}}/products/19 HTTP/1.1
 Content-Type: application/json
 
 {

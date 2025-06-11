@@ -7,6 +7,8 @@ from products.models import Product
 from products.serializers import (
     ProductSerializer,
     ProductViewSerializer,
+    ProductsSearchParamsSerializer,
+    CustomPagination,
 )
 
 # Create your views here.
@@ -14,19 +16,21 @@ from products.serializers import (
 
 class ProductList(APIView):
     def get(self, request: Request, format=None):
-        brand_query_str = request.query_params.get("brand", "")
-        type_query_str = request.query_params.get("type", "")
-        sort_query_str = request.query_params.get("sort", "")
+        search_params_serializer = ProductsSearchParamsSerializer(
+            data=request.query_params.dict()
+        )
+        search_params_serializer.is_valid(raise_exception=True)
+        search_params = search_params_serializer.validated_data
 
         query = Product.objects
 
-        if brand_query_str:
-            query = query.filter(brand__exact=brand_query_str)
+        if search_params["brand"]:
+            query = query.filter(brand__exact=search_params["brand"])
 
-        if type_query_str:
-            query = query.filter(type__exact=type_query_str)
+        if search_params["type"]:
+            query = query.filter(type__exact=search_params["type"])
 
-        match sort_query_str:
+        match search_params["sort"].lower():
             case "price":
                 query = query.order_by("price")
             case "-price":
@@ -34,11 +38,36 @@ class ProductList(APIView):
             case _:
                 query = query.order_by("name")
 
-        products = query.all()
+        queryset = query.all()
 
-        response_serializer = ProductViewSerializer(products, many=True)
+        pagination = CustomPagination()
+        pagination.paginate_queryset(queryset=queryset, request=request)
 
-        return Response({"products": response_serializer.data})
+        page_product = pagination.page
+
+        response_serializer = ProductViewSerializer(list(page_product), many=True)
+
+        return Response(
+            {
+                "links": {
+                    "next": pagination.get_next_link(),
+                    "prev": pagination.get_previous_link(),
+                },
+                "previousPage": (
+                    page_product.previous_page_number()
+                    if page_product.has_previous()
+                    else None
+                ),
+                "nextPage": (
+                    page_product.next_page_number() if page_product.has_next() else None
+                ),
+                "page": page_product.number,
+                "pageSize": page_product.paginator.per_page,
+                "total": page_product.paginator.count,
+                "count": len(response_serializer.data),
+                "products": response_serializer.data,
+            }
+        )
 
     def post(self, request: Request, format=None):
         serializer = ProductSerializer(data=request.data)

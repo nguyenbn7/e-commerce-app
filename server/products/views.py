@@ -63,6 +63,7 @@ class ProductList(APIView):
                 ),
                 "page": page_product.number,
                 "pageSize": page_product.paginator.per_page,
+                "totalPages": page_product.paginator.num_pages,
                 "total": page_product.paginator.count,
                 "count": len(response_serializer.data),
                 "products": response_serializer.data,

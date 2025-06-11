@@ -1,7 +1,7 @@
 @baseAPIUrl=http://localhost:8000/api
 
 ###
-GET {{baseAPIUrl}}/products/?type=Boots&sort=-price&pageSize=3 HTTP/1.1
+GET {{baseAPIUrl}}/products/?page=2 HTTP/1.1
 
 ###
 GET {{baseAPIUrl}}/products/brands HTTP/1.1
